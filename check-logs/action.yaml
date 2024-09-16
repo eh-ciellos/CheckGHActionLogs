@@ -47,5 +47,5 @@ runs:
     - name: 'Check Workflow Logs'
       shell: pwsh
       run: |
-        actions/check-logs/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -WORKFLOWS ${{ inputs.workflows }}
+        ${{ github.action_path }}/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -WORKFLOWS ${{ inputs.workflows }}
       id: check_logs
