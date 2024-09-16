@@ -1,0 +1,51 @@
+# .github/actions/check-logs/action.yml
+
+name: 'Check Logs'
+description: 'Checks GitHub workflows for errors or failures and retrieves logs'
+inputs:
+  gh_token:
+    description: 'GitHub Token'
+    required: true
+  workflows:
+    description: 'Workflow name(s) to check. This input is dynamic and filters will be applied in the script.'
+    required: false  # Making this input optional
+    default: ''  # Default to empty, allowing all workflows to be checked
+outputs:
+  allFoundErrors:
+    description: 'All errors found during the workflow runs'
+    value: ${{ steps.check_logs.outputs.allFoundErrors }}
+  workflowRunName:
+    description: 'Name of the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunName }}
+  workflowRunId:
+    description: 'ID of the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunId }}
+  workflowRunAttempts:
+    description: 'Number of attempts of the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunAttempts }}
+  workflowRunStartTime:
+    description: 'Start time of the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunStartTime }}
+  workflowRunOnBranch:
+    description: 'Branch on which the workflow run was executed'
+    value: ${{ steps.check_logs.outputs.workflowRunOnBranch }}
+  workflowRunAtEvent:
+    description: 'Event that triggered the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunAtEvent }}
+  workflowRunConclusion:
+    description: 'Conclusion of the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunConclusion }}
+  workflowRunURL:
+    description: 'URL of the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunURL }}
+  workflowRunMessage:
+    description: 'Message summarizing the workflow run and its errors'
+    value: ${{ steps.check_logs.outputs.workflowRunMessage }}
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Check Workflow Logs'
+      shell: pwsh
+      run: |
+        .github/actions/check-logs/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -WORKFLOWS ${{ inputs.workflows }}
+      id: check_logs
