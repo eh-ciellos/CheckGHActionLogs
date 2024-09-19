@@ -22,7 +22,7 @@ runs:
   using: 'composite'
   steps:
     - name: 'Check Workflow Logs'
+      id: check_logs
       shell: pwsh
       run: |
-        .github/actions/check-logs/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -WORKFLOWS ${{ inputs.workflows }}
-      id: check_logs
+        try { ${{ github.action_path }}/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -WORKFLOWS ${{ inputs.workflows }} catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
