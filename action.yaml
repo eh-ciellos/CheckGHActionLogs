@@ -25,4 +25,4 @@ runs:
       id: check_logs
       shell: pwsh
       run: |
-        try { ${{ github.action_path }}/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -WORKFLOWS ${{ inputs.workflows }} catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+        try { ${{ github.action_path }}/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -WORKFLOWS ${{ inputs.workflows }} } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
