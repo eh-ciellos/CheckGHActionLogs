@@ -5,6 +5,22 @@ param(
     [string]$WORKFLOWS
 )
 
+Param(
+    [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
+    [string] $GH_TOKEN,
+    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
+    [string] $token
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version 2.0
+
+# IMPORTANT: No code that can fail should be outside the try/catch
+
+try {
+    $workflowName = $env:GITHUB_WORKFLOW
+    $Script:IsOnGitHub = $true
+
 # Example outputs
 $workflowRunMessage = "Workflow completed with status: success"
 $workflowRunName = "Example Workflow"
@@ -22,3 +38,10 @@ Add-Content -Path $env:GITHUB_ENV -Value "Environments=$workflowRunId"
 Write-Output "Set workflowRunMessage: $workflowRunMessage"
 Write-Output "Set workflowRunName: $workflowRunName"
 Write-Output "Set workflowRunId: $workflowRunId"
+}
+catch{
+    Write-Output "$workflowRunMessage"
+    Write-Output "$workflowRunName"
+    Write-Output "$workflowRunId"
+    Write-Output "$workflowName"
+}
