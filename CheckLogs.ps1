@@ -1,15 +1,8 @@
-# .github/actions/check-logs/CheckLogs.ps1
-
-param(
-    [string]$GH_TOKEN,
-    [string]$WORKFLOWS
-)
-
 Param(
     [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
     [string] $GH_TOKEN,
-    [Parameter(HelpMessage = "The GitHub token running the action", Mandatory = $false)]
-    [string] $token
+    [Parameter(HelpMessage = "The GitHub workflow name", Mandatory = $true)]
+    [string] $WORKFLOWS
 )
 
 $ErrorActionPreference = "Stop"
