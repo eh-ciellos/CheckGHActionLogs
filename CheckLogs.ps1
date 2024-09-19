@@ -20,12 +20,12 @@ $workflowRunName = "Example Workflow"
 $workflowRunId = "12345"
 
 # Set the outputs using GitHub Actions environment file
-Add-Content -Path $env:GITHUB_OUTPUT -Value "Environments=$workflowRunMessage"
-Add-Content -Path $env:GITHUB_ENV -Value "Environments=$workflowRunMessage"
-Add-Content -Path $env:GITHUB_OUTPUT -Value "Environments=$workflowRunName"
-Add-Content -Path $env:GITHUB_ENV -Value "Environments=$workflowRunName"
-Add-Content -Path $env:GITHUB_OUTPUT -Value "Environments=$workflowRunId"
-Add-Content -Path $env:GITHUB_ENV -Value "Environments=$workflowRunId"
+Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage=$workflowRunMessage"
+Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$workflowRunMessage"
+Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunName=$workflowRunName"
+Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
+Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunId=$workflowRunId"
+Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
 
 # Debug: Print the output values
 Write-Output "Set workflowRunMessage: $workflowRunMessage"
