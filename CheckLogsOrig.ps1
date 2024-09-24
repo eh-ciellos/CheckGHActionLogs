@@ -107,8 +107,8 @@ function Check-GitHubWorkflow {
                 }
 
             } catch {
-                Write-Output "Failed to download or extract the log file."
-                Write-Output $_.Exception.Message
+                Write-Host "Failed to download or extract the log file."
+                Write-Host $_.Exception.Message
                 $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
                 continue
             }
@@ -128,8 +128,8 @@ function Check-GitHubWorkflow {
         $workflowRunURL = $foundWorkflows[0]?.WorkflowRunURL
 
         # Set output variables using environment file
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$allFoundErrors"
-        Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$allFoundErrors"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$($allFoundErrors -join ', ')"
+        Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$($allFoundErrors -join ', ')"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunName=$workflowRunName"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunId=$workflowRunId"
