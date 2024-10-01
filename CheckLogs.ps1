@@ -115,6 +115,18 @@ function Check-GitHubWorkflow {
                     }
                 }
 
+                $foundWorkflows += [PSCustomObject]@{
+                    WorkflowRunName = $workflowRunName
+                    WorkflowRunId   = $workflowRunId
+                    WorkflowRunAttempts = $workflowRunAttempts
+                    WorkflowRunStartTime = $workflowRunStartTime
+                    WorkflowRunOnBranch = $workflowRunOnBranch
+                    WorkflowRunAtEvent = $workflowRunAtEvent
+                    WorkflowRunConclusion = $workflowRunConclusion
+                    WorkflowRunURL = $workflowRunURL
+                    WorkflowRunMessage = $workflowRunMessage
+                }
+
             } catch {
                 Write-Output "Failed to download or extract the log file."
                 Write-Output $_.Exception.Message
@@ -135,6 +147,7 @@ function Check-GitHubWorkflow {
         $workflowRunAtEvent = $foundWorkflows[0]?.WorkflowRunAtEvent
         $workflowRunConclusion = $foundWorkflows[0]?.WorkflowRunConclusion
         $workflowRunURL = $foundWorkflows[0]?.WorkflowRunURL
+        $workflowRunMessage = $foundWorkflows[0]?.WorkflowRunMessage
 
         # Set output variables using environment file
         Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$allFoundErrors"
