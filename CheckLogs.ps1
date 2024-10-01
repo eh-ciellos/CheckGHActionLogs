@@ -1,9 +1,9 @@
 Param(
         [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
         [string] $GH_TOKEN,
-        [Parameter(HelpMessage = "The GitHub workflow name", Mandatory = $true)]
-        [string] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
-        [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $false)]
+        [Parameter(HelpMessage = "Array of GitHub workflow names", Mandatory = $true)]
+        [string[]] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),        
+        [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $true)]
         [string]$REPO# = 'eh-ciellos/ALGoNotify-Paya' #$env:GITHUB_REPOSITORY
 )
 
@@ -11,9 +11,9 @@ function Check-GitHubWorkflow {
     Param(
         [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
         [string] $GH_TOKEN,
-        [Parameter(HelpMessage = "Comma-separated list of GitHub workflow names", Mandatory = $true)]
-        [string] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
-        [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $false)]
+        [Parameter(HelpMessage = "Array of GitHub workflow names", Mandatory = $true)]
+        [string[]] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
+        [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $true)]
         [string] $REPO = $env:GITHUB_REPOSITORY
     )
 
@@ -38,7 +38,8 @@ function Check-GitHubWorkflow {
     #$WORKFLOWS -split ',' | ForEach-Object { $_.Trim() }
 
     # Filter runs for specific workflows
-    $filteredWorkflows = $workflowRuns | Where-Object { $_.displayTitle -in $workflowNames }
+    $filteredWorkflows = @($workflowRuns | Where-Object { $_.displayTitle -in $workflowNames })
+    #$filteredWorkflows = $workflowRuns | Where-Object { $_.displayTitle -in $workflowNames }
     #$filteredWorkflows = $workflowRuns | Where-Object { $_.displayTitle -in $workflowNames }
 
     # Check if any filtered workflow runs are found
@@ -98,7 +99,7 @@ function Check-GitHubWorkflow {
           $logFile = "$($env:TEMP)\workflow_$workflowRunId.zip"
       
           # Try to download the logs
-          #try {
+          try {
               Invoke-RestMethod -Uri $logUrl -Headers $headers -OutFile $logFile
               Write-Output "Log file downloaded successfully to $logFile"
       
@@ -126,13 +127,13 @@ function Check-GitHubWorkflow {
                   Remove-Item -Path $logFile -Force
                   Remove-Item -Path $allLogsFile -Force  # Clean up all_logs.txt
               }
-        #   } catch {
-        #       Write-Output "Failed to download or extract the log file."
-        #       Write-Output $_.Exception.Message
-        #       $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
-        #       $workflowRunMessage = "Failed to download or extract the log file."
-        #       continue
-        #   }
+          } catch {
+              Write-Output "Failed to download or extract the log file."
+              Write-Output $_.Exception.Message
+              $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
+              $workflowRunMessage = "Failed to download or extract the log file."
+              continue
+          }
       
           # Collect found workflow details, including the workflowRunMessage
           $foundWorkflows += [PSCustomObject]@{
