@@ -79,7 +79,7 @@ function Check-GitHubWorkflow {
         elseif ($workflowRunConclusion -eq "failure") {
             # Set headers for authentication
             # Fetch workflow run logs using Invoke-RestMethod
-          $workflowRunURL = "https://api.github.com/repos/$repo/actions/runs/$runDatabaseId/logs"
+          $workflowRunURL = "https://api.github.com/repos/$repo/actions/runs/$workflowRunId/logs"
 
           Write-Host "Fetching logs from $workflowRunURL"
 
