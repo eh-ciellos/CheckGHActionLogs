@@ -92,7 +92,7 @@ function Check-GitHubWorkflow {
             $logFile = "$($env:TEMP)\workflow_$workflowRunId_log.zip"
 
             # Try to download the logs
-            try {
+            #try {
                 Invoke-RestMethod -Uri "$workflowRunURL/logs" -Headers $headers -OutFile $logFile
                 Write-Host "Log file downloaded successfully to $logFile"
 
@@ -113,12 +113,12 @@ function Check-GitHubWorkflow {
                     #Remove-Item -Path $logFile -Force
                 }
 
-            } catch {
-                Write-Output "Failed to download or extract the log file."
-                Write-Output $_.Exception.Message
-                $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
-                $workflowRunMessage = "Failed to download or extract the log file."
-            }
+            # } catch {
+            #     Write-Output "Failed to download or extract the log file."
+            #     Write-Output $_.Exception.Message
+            #     $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
+            #     $workflowRunMessage = "Failed to download or extract the log file."
+            # }
 
             # Collect found workflow details, including the workflowRunMessage
             $foundWorkflows += [PSCustomObject]@{
