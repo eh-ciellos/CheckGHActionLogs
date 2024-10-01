@@ -78,10 +78,17 @@ function Check-GitHubWorkflow {
         }
         elseif ($workflowRunConclusion -eq "failure") {
             # Set headers for authentication
-            $headers = @{
-                "Authorization" = "Bearer $GH_TOKEN"
-                "Accept"        = "application/vnd.github+json"
-                "X-GitHub-Api-Version" = "2022-11-28"
+            # Fetch workflow run logs using Invoke-RestMethod
+          $workflowRunURL = "https://api.github.com/repos/$repo/actions/runs/$runDatabaseId/logs"
+
+          Write-Host "Fetching logs from $workflowRunURL"
+
+          # Use Invoke-RestMethod to download the logs
+          $logFile = "workflow_logs.zip"
+          $headers = @{
+            "Authorization" = "Bearer $GH_TOKEN"
+            "Accept" = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
             }
 
             # Define a temporary file path for logs
