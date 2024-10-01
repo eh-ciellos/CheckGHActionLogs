@@ -89,7 +89,7 @@ function Check-GitHubWorkflow {
             }
 
             # Define a temporary file path for logs
-            $logFile = "$($env:TEMP)\workflow_$workflowRunId_log.zip"
+            $logFile = "$($env:TEMP)\workflow_$workflowRunId.zip"
 
             # Try to download the logs
             #try {
