@@ -6,9 +6,6 @@ inputs:
   gh_token:
     description: 'GitHub Token'
     required: true
-  repository:
-    description: 'GitHub Repository'
-    required: true
   workflows:
     description: 'Workflow name(s) to check. This input is dynamic and filters will be applied in the script.'
     required: true  # Making this input optional
@@ -51,4 +48,4 @@ runs:
       id: check_logs
       shell: pwsh
       run: |
-        try { ${{ github.action_path }}/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -REPO ${{ inputs.repository}} -WORKFLOWS ${{ inputs.workflows }} } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
+        try { ${{ github.action_path }}/CheckLogs.ps1 -GH_TOKEN ${{ inputs.gh_token }} -WORKFLOWS ${{ inputs.workflows }} } catch { Write-Host "::Error::Unexpected error when running action ($($_.Exception.Message))"; exit 1 }
