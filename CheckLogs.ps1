@@ -37,7 +37,7 @@ function Check-GitHubWorkflow {
     $workflowRuns = $workflowRuns | ConvertFrom-Json
 
     # Filter runs for specific workflows: "Test Next Major" or "Test Next Minor"
-    $filteredWorkflows = $workflowRuns | Where-Object { $_.displayTitle -in @(" Test Next Major", " Test Next Minor") }
+    $filteredWorkflows = $workflowRuns | Where-Object { $_.displayTitle -in @(" Test Next Major") }
 
     # Check if any filtered workflow runs are found
     if ($filteredWorkflows.Count -eq 0) {
