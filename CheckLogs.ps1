@@ -1,20 +1,21 @@
 Param(
-        [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
-        [string] $GH_TOKEN,
-        [Parameter(HelpMessage = "The GitHub workflow name", Mandatory = $true)]
-        [string] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
-        [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $true)]
-        [string]$REPO# = 'eh-ciellos/ALGoNotify-Paya' #$env:GITHUB_REPOSITORY
+    [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
+    [string] $GH_TOKEN,
+    [Parameter(HelpMessage = "The GitHub workflow name", Mandatory = $true)]
+    [string] $WORKFLOWS
 )
+
+# Use the default GitHub environment variable for the repository
+$REPO = $env:GITHUB_REPOSITORY
 
 function Check-GitHubWorkflow {
     Param(
         [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
         [string] $GH_TOKEN,
-        [Parameter(HelpMessage = "Comma-separated list of GitHub workflow names", Mandatory = $true)]
-        [string] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
+        [Parameter(HelpMessage = "The GitHub workflow name", Mandatory = $true)]
+        [string] $WORKFLOWS,
         [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $true)]
-        [string] $REPO = $env:GITHUB_REPOSITORY
+        [string]$REPO
     )
 
     $ErrorActionPreference = "Stop"
