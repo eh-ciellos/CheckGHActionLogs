@@ -31,13 +31,13 @@ function Check-GitHubWorkflow {
     $foundWorkflows = @()
 
     # Fetch the workflow runs using GitHub CLI
-    $workflowRuns = gh run list --repo $REPO --limit 10 --json attempt,startedAt,name,number,displayTitle,createdAt,headBranch,event,url,databaseId,workflowDatabaseId,workflowName,status,conclusion
+    $workflowRuns = gh run list --repo $REPO --limit 3 --json attempt,startedAt,name,number,displayTitle,createdAt,headBranch,event,url,databaseId,workflowDatabaseId,workflowName,status,conclusion
 
     # Convert JSON output to PowerShell object
     $workflowRuns = $workflowRuns | ConvertFrom-Json
 
     # Filter runs for specific workflows: "Test Next Major" or "Test Next Minor"
-    $filteredWorkflows = $workflowRuns | Where-Object { $_.displayTitle -in @(" Test Next Major", " Test Next Minor") }
+    $filteredWorkflows = $workflowRuns | Where-Object { $_.displayTitle -in @(" Test Next Major") }
 
     # Check if any filtered workflow runs are found
     if ($filteredWorkflows.Count -eq 0) {
