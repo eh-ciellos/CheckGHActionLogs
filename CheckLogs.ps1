@@ -109,8 +109,8 @@ function Check-GitHubWorkflow {
                         }
                     }
                     # Clean up temporary files
-                    Remove-Item -Path "$($env:TEMP)\workflow_logs_$workflowRunId" -Recurse -Force
-                    Remove-Item -Path $logFile -Force
+                    #Remove-Item -Path "$($env:TEMP)\workflow_logs_$workflowRunId" -Recurse -Force
+                    #Remove-Item -Path $logFile -Force
                 }
 
             } catch {
