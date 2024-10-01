@@ -95,6 +95,9 @@ function Check-GitHubWorkflow {
             }
         }
         elseif ($workflowRunConclusion -eq "failure") {
+            # Initialize message
+            $workflowRunMessage = ""
+
             # Set headers for authentication
             # Fetch workflow run logs using Invoke-RestMethod
             $workflowRunLogURL = "https://api.github.com/repos/$REPO/actions/runs/$workflowRunId/logs"
@@ -150,6 +153,23 @@ function Check-GitHubWorkflow {
                 Write-Host "Failed to download or extract the log file for workflow run ID $workflowRunId."
                 Write-Host "Exception Message: $($_.Exception.Message)"
                 $allFoundErrors += "Failed to process logs for workflow: '$workflowRunName'"
+
+                # Set a default message indicating failure
+                $workflowRunMessage = "Failed to download or extract logs."
+
+                # Add the workflow details to $foundWorkflows even if there was an error
+                $foundWorkflows += [PSCustomObject]@{
+                    WorkflowRunName       = $workflowRunName
+                    WorkflowRunId         = $workflowRunId
+                    WorkflowRunAttempts   = $workflowRunAttempts
+                    WorkflowRunStartTime  = $workflowRunStartTime
+                    WorkflowRunOnBranch   = $workflowRunOnBranch
+                    WorkflowRunAtEvent    = $workflowRunAtEvent
+                    WorkflowRunConclusion = $workflowRunConclusion
+                    WorkflowRunURL        = $workflowRunURL
+                    WorkflowRunMessage    = $workflowRunMessage
+                }
+
                 continue
             }
         }
