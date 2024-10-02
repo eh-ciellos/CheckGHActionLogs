@@ -3,7 +3,7 @@ Param(
     [string] $GH_TOKEN,
     [Parameter(HelpMessage = "Array of GitHub workflow names", Mandatory = $true)]
     [string[]] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
-    [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $true)]
+    [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $false)]
     [string] $REPO = $env:GITHUB_REPOSITORY
 )
 
@@ -13,7 +13,7 @@ function Check-GitHubWorkflow {
         [string] $GH_TOKEN,
         [Parameter(HelpMessage = "Array of GitHub workflow names", Mandatory = $true)]
         [string[]] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
-        [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $true)]
+        [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $false)]
         [string] $REPO = $env:GITHUB_REPOSITORY
     )
 
