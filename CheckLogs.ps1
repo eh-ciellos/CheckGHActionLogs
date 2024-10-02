@@ -163,9 +163,7 @@ function Check-GitHubWorkflow {
             $delimWorkflowRunMessage = "EOF$(Get-Random)"
             $delimAllFoundErrors = "EOF$(Get-Random)"
 
-            # Set output variables using environment file with proper handling for multi-line values
-
-            # For $env:GITHUB_OUTPUT
+            # Set output variables using $GITHUB_OUTPUT (supports multi-line)
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunName=$workflowRunName"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunId=$workflowRunId"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAttempts=$workflowRunAttempts"
@@ -177,7 +175,11 @@ function Check-GitHubWorkflow {
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage<<$delimWorkflowRunMessage`n$workflowRunMessage`n$delimWorkflowRunMessage"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors<<$delimAllFoundErrors`n$allFoundErrors`n$delimAllFoundErrors"
 
-            # For $env:GITHUB_ENV
+            # Encode multi-line values before writing to $GITHUB_ENV
+            $encodedWorkflowRunMessage = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($workflowRunMessage))
+            $encodedAllFoundErrors = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($allFoundErrors))
+
+            # Write to $GITHUB_ENV
             Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
             Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
             Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAttempts=$workflowRunAttempts"
@@ -186,8 +188,8 @@ function Check-GitHubWorkflow {
             Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAtEvent=$workflowRunAtEvent"
             Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
             Add-Content -Path $env:GITHUB_ENV -Value "workflowRunURL=$workflowRunURL"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage<<$delimWorkflowRunMessage`n$workflowRunMessage`n$delimWorkflowRunMessage"
-            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors<<$delimAllFoundErrors`n$allFoundErrors`n$delimAllFoundErrors"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$encodedWorkflowRunMessage"
+            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$encodedAllFoundErrors"
 
             # Debug: Print the output values
             Write-Output "Set allFoundErrors: $allFoundErrors"
