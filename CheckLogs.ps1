@@ -157,28 +157,39 @@ function Check-GitHubWorkflow {
             $workflowRunConclusion = $foundWorkflows[0].WorkflowRunConclusion
             $workflowRunURL        = $foundWorkflows[0].WorkflowRunURL
             $workflowRunMessage    = $foundWorkflows[0].WorkflowRunMessage
+            $allFoundErrors        = $allFoundErrors -join "`n"
 
-            # Set output variables using environment file
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$($allFoundErrors -join "`n")"
-            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$($allFoundErrors -join "`n")"
+            # Generate unique delimiters
+            $delimWorkflowRunMessage = "EOF$(Get-Random)"
+            $delimAllFoundErrors = "EOF$(Get-Random)"
+
+            # Set output variables using $GITHUB_OUTPUT (supports multi-line)
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunName=$workflowRunName"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunId=$workflowRunId"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAttempts=$workflowRunAttempts"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAttempts=$workflowRunAttempts"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunStartTime=$workflowRunStartTime"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunStartTime=$workflowRunStartTime"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunOnBranch=$workflowRunOnBranch"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunOnBranch=$workflowRunOnBranch"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAtEvent=$workflowRunAtEvent"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAtEvent=$workflowRunAtEvent"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunConclusion=$workflowRunConclusion"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunURL=$workflowRunURL"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage<<$delimWorkflowRunMessage`n$workflowRunMessage`n$delimWorkflowRunMessage"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors<<$delimAllFoundErrors`n$allFoundErrors`n$delimAllFoundErrors"
+
+            # Encode multi-line values before writing to $GITHUB_ENV
+            $encodedWorkflowRunMessage = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($workflowRunMessage))
+            $encodedAllFoundErrors = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($allFoundErrors))
+
+            # Write to $GITHUB_ENV
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAttempts=$workflowRunAttempts"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunStartTime=$workflowRunStartTime"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunOnBranch=$workflowRunOnBranch"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAtEvent=$workflowRunAtEvent"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
             Add-Content -Path $env:GITHUB_ENV -Value "workflowRunURL=$workflowRunURL"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage=$workflowRunMessage"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$workflowRunMessage"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$encodedWorkflowRunMessage"
+            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$encodedAllFoundErrors"
 
             # Debug: Print the output values
             Write-Output "Set allFoundErrors: $allFoundErrors"
