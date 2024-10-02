@@ -94,7 +94,7 @@ function Check-GitHubWorkflow {
                 $logFile = "$($env:TEMP)\workflow_$workflowRunId.zip"
 
                 # Try to download the logs
-                #try {
+                try {
                     Invoke-RestMethod -Uri $logUrl -Headers $headers -OutFile $logFile
                     Write-Output "Log file downloaded successfully to $logFile"
 
@@ -122,13 +122,13 @@ function Check-GitHubWorkflow {
                         Remove-Item -Path $logFile -Force
                         Remove-Item -Path $allLogsFile -Force  # Clean up all_logs.txt
                     }
-                # } catch {
-                #     Write-Output "Failed to download or extract the log file."
-                #     Write-Output $_.Exception.Message
-                #     $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
-                #     $workflowRunMessage = "Failed to download or extract the log file."
-                #     continue
-                # }
+                } catch {
+                    Write-Output "Failed to download or extract the log file."
+                    Write-Output $_.Exception.Message
+                    $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
+                    $workflowRunMessage = "Failed to download or extract the log file."
+                    continue
+                }
 
                 # Collect found workflow details, including the workflowRunMessage
                 $foundWorkflows += [PSCustomObject]@{
@@ -157,28 +157,37 @@ function Check-GitHubWorkflow {
             $workflowRunConclusion = $foundWorkflows[0].WorkflowRunConclusion
             $workflowRunURL        = $foundWorkflows[0].WorkflowRunURL
             $workflowRunMessage    = $foundWorkflows[0].WorkflowRunMessage
+            $allFoundErrors        = $allFoundErrors -join "`n"
 
-            # Set output variables using environment file
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$($allFoundErrors -join "`n")"
-            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$($allFoundErrors -join "`n")"
+            # Generate unique delimiters
+            $delimWorkflowRunMessage = "EOF$(Get-Random)"
+            $delimAllFoundErrors = "EOF$(Get-Random)"
+
+            # Set output variables using environment file with proper handling for multi-line values
+
+            # For $env:GITHUB_OUTPUT
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunName=$workflowRunName"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunId=$workflowRunId"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAttempts=$workflowRunAttempts"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAttempts=$workflowRunAttempts"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunStartTime=$workflowRunStartTime"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunStartTime=$workflowRunStartTime"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunOnBranch=$workflowRunOnBranch"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunOnBranch=$workflowRunOnBranch"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAtEvent=$workflowRunAtEvent"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAtEvent=$workflowRunAtEvent"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunConclusion=$workflowRunConclusion"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
             Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunURL=$workflowRunURL"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage<<$delimWorkflowRunMessage`n$workflowRunMessage`n$delimWorkflowRunMessage"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors<<$delimAllFoundErrors`n$allFoundErrors`n$delimAllFoundErrors"
+
+            # For $env:GITHUB_ENV
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAttempts=$workflowRunAttempts"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunStartTime=$workflowRunStartTime"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunOnBranch=$workflowRunOnBranch"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAtEvent=$workflowRunAtEvent"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
             Add-Content -Path $env:GITHUB_ENV -Value "workflowRunURL=$workflowRunURL"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage=$workflowRunMessage"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$workflowRunMessage"
+            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage<<$delimWorkflowRunMessage`n$workflowRunMessage`n$delimWorkflowRunMessage"
+            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors<<$delimAllFoundErrors`n$allFoundErrors`n$delimAllFoundErrors"
 
             # Debug: Print the output values
             Write-Output "Set allFoundErrors: $allFoundErrors"
