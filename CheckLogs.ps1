@@ -109,12 +109,20 @@ function Check-GitHubWorkflow {
                         Get-ChildItem -Path $extractPath -Recurse -Filter "*.txt" | ForEach-Object { Get-Content $_.FullName } | Out-File -FilePath $allLogsFile
 
                         # Filter for errors and extract the content after [error]
-                        $filteredErrors = Get-Content -Path $allLogsFile | Select-String -Pattern "\[error\]" | ForEach-Object { $_ -replace '.*\[error\]\s*', '' }
+                        $filteredErrors = Get-Content -Path $allLogsFile | Select-String -Pattern "\[error\]" | ForEach-Object {
+                            # Extract the error message after [error]
+                            $errorMessage = $_ -replace '.*\[error\]\s*', ''
+                            # Check if the error message starts with AL followed by digits
+                            if ($errorMessage -match '^AL\d+\b') {
+                                # Return the error message
+                                $errorMessage
+                            }
+                        } | Select-Object -Unique
 
                         if ($filteredErrors) {
                             $workflowRunMessage += "`n`nErrors found in logs:`n" + ($filteredErrors -join "`n")
                         } else {
-                            $workflowRunMessage = "No errors found in logs."
+                            $workflowRunMessage = "No relevant AL error codes found in logs."
                         }
 
                         # Clean up temporary files
@@ -122,6 +130,7 @@ function Check-GitHubWorkflow {
                         Remove-Item -Path $logFile -Force
                         Remove-Item -Path $allLogsFile -Force  # Clean up all_logs.txt
                     }
+
                 } catch {
                     Write-Output "Failed to download or extract the log file."
                     Write-Output $_.Exception.Message
