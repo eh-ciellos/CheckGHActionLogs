@@ -1,8 +1,6 @@
 Param(
     [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
     [string] $GH_TOKEN,
-    [Parameter(HelpMessage = "Array of GitHub workflow names", Mandatory = $true)]
-    [string[]] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
     [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $false)]
     [string] $REPO = $env:GITHUB_REPOSITORY
 )
@@ -11,10 +9,8 @@ function Check-GitHubWorkflow {
     Param(
         [Parameter(HelpMessage = "The GitHub Token running the action", Mandatory = $true)]
         [string] $GH_TOKEN,
-        [Parameter(HelpMessage = "Array of GitHub workflow names", Mandatory = $true)]
-        [string[]] $WORKFLOWS = @(" Test Next Major", " Test Next Minor"),
         [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $false)]
-        [string] $REPO = $env:GITHUB_REPOSITORY
+        [string] $REPO
     )
 
     $ErrorActionPreference = "Stop"
@@ -27,8 +23,46 @@ function Check-GitHubWorkflow {
     # Authenticate GitHub CLI
     $GH_TOKEN | gh auth login --with-token
 
+    # Retrieve the 'WORKFLOWS' repository variable using GitHub REST API
+    $headers = @{
+        "Authorization" = "Bearer $GH_TOKEN"
+        "Accept"        = "application/vnd.github+json"
+    }
+
+    $variablesUrl = "https://api.github.com/repos/$REPO/actions/variables/WORKFLOWS"
+
+    try {
+        $variableResponse = Invoke-RestMethod -Uri $variablesUrl -Headers $headers
+    } catch {
+        Write-Host "Failed to retrieve the 'WORKFLOWS' repository variable."
+        Write-Host $_.Exception.Message
+        return
+    }
+
+    if (-not $variableResponse || -not $variableResponse.value) {
+        Write-Host "The 'WORKFLOWS' variable is not set or has no value."
+        return
+    }
+
+    # Parse the JSON string to get the list of workflows
+    try {
+        $WORKFLOWS = ConvertFrom-Json -InputObject $variableResponse.value
+    } catch {
+        Write-Host "Failed to parse the 'WORKFLOWS' variable as JSON."
+        Write-Host $_.Exception.Message
+        return
+    }
+
+    if (-not $WORKFLOWS) {
+        Write-Host "No workflow names found in the 'WORKFLOWS' variable."
+        return
+    }
+
+    # Remove duplicates and empty entries
+    $WORKFLOWS = $WORKFLOWS | Where-Object { $_ -and $_ -ne '' } | Select-Object -Unique
+
     # Fetch the workflow runs using GitHub CLI
-    $workflowRunsJson = gh run list --repo $REPO --limit 3 --json attempt,conclusion,startedAt,name,number,displayTitle,createdAt,headBranch,event,url,databaseId,workflowDatabaseId,workflowName,status
+    $workflowRunsJson = gh run list --repo $REPO --limit 10 --json attempt,conclusion,startedAt,name,number,displayTitle,createdAt,headBranch,event,url,databaseId,workflowDatabaseId,workflowName,status
 
     # Convert JSON output to PowerShell object
     $workflowRuns = $workflowRunsJson | ConvertFrom-Json
@@ -36,15 +70,25 @@ function Check-GitHubWorkflow {
     # Ensure $workflowRuns is always an array
     $workflowRuns = @($workflowRuns)
 
-    # Use WORKFLOWS as an array directly
-    $workflowNames = $WORKFLOWS
+    # Check if any workflow runs are found
+    if (-not $workflowRuns) {
+        Write-Host "No workflow runs found in repository '$REPO'."
+        return
+    }
 
-    # Filter runs for specific workflows
-    $filteredWorkflows = @($workflowRuns | Where-Object { $_.displayTitle -in $workflowNames })
+    # Loop over each workflow name
+    foreach ($workflowName in $WORKFLOWS) {
+        # Trim the workflow name to remove leading/trailing spaces
+        $workflowNameTrimmed = $workflowName.Trim()
 
-    # Check if any filtered workflow runs are found
-    if ($filteredWorkflows) {
-        foreach ($run in $filteredWorkflows) {
+        # Filter runs for the specific workflow
+        $filteredWorkflows = @($workflowRuns | Where-Object { $_.displayTitle -eq $workflowNameTrimmed })
+
+        # Check if any filtered workflow runs are found
+        if ($filteredWorkflows) {
+            # Process only the first found workflow
+            $run = $filteredWorkflows[0]
+
             # Initialize message
             $workflowRunMessage = ""
 
@@ -77,6 +121,9 @@ function Check-GitHubWorkflow {
                     WorkflowRunURL        = $workflowRunURL
                     WorkflowRunMessage    = $workflowRunMessage
                 }
+
+                # Exit the loop after processing the first workflow
+                break
             }
             elseif ($workflowRunConclusion -eq "failure") {
                 # Initialize message
@@ -136,7 +183,6 @@ function Check-GitHubWorkflow {
                     Write-Output $_.Exception.Message
                     $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
                     $workflowRunMessage = "Failed to download or extract the log file."
-                    continue
                 }
 
                 # Collect found workflow details, including the workflowRunMessage
@@ -151,73 +197,79 @@ function Check-GitHubWorkflow {
                     WorkflowRunURL        = $workflowRunURL
                     WorkflowRunMessage    = $workflowRunMessage
                 }
+
+                # Exit the loop after processing the first workflow
+                break
+            } else {
+                Write-Host "Workflow '$workflowRunName' has conclusion: $workflowRunConclusion. No action taken."
+                # Proceed to the next workflow if needed
             }
-        }
-
-        # Prepare outputs if workflows were found
-        if ($foundWorkflows) {
-            # Output all relevant details of the first found workflow
-            $workflowRunName       = $foundWorkflows[0].WorkflowRunName
-            $workflowRunId         = $foundWorkflows[0].WorkflowRunId
-            $workflowRunAttempts   = $foundWorkflows[0].WorkflowRunAttempts
-            $workflowRunStartTime  = $foundWorkflows[0].WorkflowRunStartTime
-            $workflowRunOnBranch   = $foundWorkflows[0].WorkflowRunOnBranch
-            $workflowRunAtEvent    = $foundWorkflows[0].WorkflowRunAtEvent
-            $workflowRunConclusion = $foundWorkflows[0].WorkflowRunConclusion
-            $workflowRunURL        = $foundWorkflows[0].WorkflowRunURL
-            $workflowRunMessage    = $foundWorkflows[0].WorkflowRunMessage
-            $allFoundErrors        = $allFoundErrors -join "`n"
-
-            # Generate unique delimiters
-            $delimWorkflowRunMessage = "EOF$(Get-Random)"
-            $delimAllFoundErrors = "EOF$(Get-Random)"
-
-            # Set output variables using $GITHUB_OUTPUT (supports multi-line)
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunName=$workflowRunName"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunId=$workflowRunId"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAttempts=$workflowRunAttempts"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunStartTime=$workflowRunStartTime"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunOnBranch=$workflowRunOnBranch"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAtEvent=$workflowRunAtEvent"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunConclusion=$workflowRunConclusion"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunURL=$workflowRunURL"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage<<$delimWorkflowRunMessage`n$workflowRunMessage`n$delimWorkflowRunMessage"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors<<$delimAllFoundErrors`n$allFoundErrors`n$delimAllFoundErrors"
-
-            # Encode multi-line values before writing to $GITHUB_ENV
-            $encodedWorkflowRunMessage = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($workflowRunMessage))
-            $encodedAllFoundErrors = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($allFoundErrors))
-
-            # Write to $GITHUB_ENV
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAttempts=$workflowRunAttempts"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunStartTime=$workflowRunStartTime"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunOnBranch=$workflowRunOnBranch"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAtEvent=$workflowRunAtEvent"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunURL=$workflowRunURL"
-            Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$encodedWorkflowRunMessage"
-            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$encodedAllFoundErrors"
-
-            # Debug: Print the output values
-            Write-Output "Set allFoundErrors: $allFoundErrors"
-            Write-Output "Set workflowRunName: $workflowRunName"
-            Write-Output "Set workflowRunId: $workflowRunId"
-            Write-Output "Set workflowRunAttempts: $workflowRunAttempts"
-            Write-Output "Set workflowRunStartTime: $workflowRunStartTime"
-            Write-Output "Set workflowRunOnBranch: $workflowRunOnBranch"
-            Write-Output "Set workflowRunAtEvent: $workflowRunAtEvent"
-            Write-Output "Set workflowRunConclusion: $workflowRunConclusion"
-            Write-Output "Set workflowRunURL: $workflowRunURL"
-            Write-Output "Set workflowRunMessage: $workflowRunMessage"
         } else {
-            Write-Host "No workflows with the specified conclusions found."
+            Write-Host "No workflow runs found for the specified workflow '$workflowNameTrimmed' in repository '$REPO'."
         }
+    }
+
+    # Prepare outputs if the workflow was processed
+    if ($foundWorkflows) {
+        # Output all relevant details of the first found workflow
+        $workflowRunName       = $foundWorkflows[0].WorkflowRunName
+        $workflowRunId         = $foundWorkflows[0].WorkflowRunId
+        $workflowRunAttempts   = $foundWorkflows[0].WorkflowRunAttempts
+        $workflowRunStartTime  = $foundWorkflows[0].WorkflowRunStartTime
+        $workflowRunOnBranch   = $foundWorkflows[0].WorkflowRunOnBranch
+        $workflowRunAtEvent    = $foundWorkflows[0].WorkflowRunAtEvent
+        $workflowRunConclusion = $foundWorkflows[0].WorkflowRunConclusion
+        $workflowRunURL        = $foundWorkflows[0].WorkflowRunURL
+        $workflowRunMessage    = $foundWorkflows[0].WorkflowRunMessage
+        $allFoundErrorsText    = $allFoundErrors -join "`n"
+
+        # Base64 encode the WorkflowRunMessage
+        $encodedWorkflowRunMessage = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($workflowRunMessage))
+
+        # Base64 encode allFoundErrors if needed
+        if ($allFoundErrors) {
+            $encodedAllFoundErrors = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($allFoundErrorsText))
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$encodedAllFoundErrors"
+        }
+
+        # Set outputs
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunName=$workflowRunName"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunId=$workflowRunId"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAttempts=$workflowRunAttempts"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunStartTime=$workflowRunStartTime"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunOnBranch=$workflowRunOnBranch"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAtEvent=$workflowRunAtEvent"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunConclusion=$workflowRunConclusion"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunURL=$workflowRunURL"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage=$encodedWorkflowRunMessage"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$encodedAllFoundErrors"
+
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAttempts=$workflowRunAttempts"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunStartTime=$workflowRunStartTime"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunOnBranch=$workflowRunOnBranch"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAtEvent=$workflowRunAtEvent"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunURL=$workflowRunURL"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$encodedWorkflowRunMessage"
+        Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$encodedAllFoundErrors"
+
+        # Debug: Print the output values
+        Write-Output "Set allFoundErrors: $allFoundErrorsText"
+        Write-Output "Set workflowRunName: $workflowRunName"
+        Write-Output "Set workflowRunId: $workflowRunId"
+        Write-Output "Set workflowRunAttempts: $workflowRunAttempts"
+        Write-Output "Set workflowRunStartTime: $workflowRunStartTime"
+        Write-Output "Set workflowRunOnBranch: $workflowRunOnBranch"
+        Write-Output "Set workflowRunAtEvent: $workflowRunAtEvent"
+        Write-Output "Set workflowRunConclusion: $workflowRunConclusion"
+        Write-Output "Set workflowRunURL: $workflowRunURL"
+        Write-Output "Set workflowRunMessage: $workflowRunMessage"
     } else {
-        Write-Host "No workflow runs found for the specified workflows in repository '$REPO'."
+        Write-Host "No workflows with the specified conclusions found."
     }
 }
 
 # Call the function
-Check-GitHubWorkflow -GH_TOKEN $GH_TOKEN -WORKFLOWS $WORKFLOWS -REPO $REPO
+Check-GitHubWorkflow -GH_TOKEN $GH_TOKEN -REPO $REPO
