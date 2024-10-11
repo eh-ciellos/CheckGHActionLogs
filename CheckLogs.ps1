@@ -17,7 +17,6 @@ function Check-GitHubWorkflow {
     Set-StrictMode -Version 2.0
 
     # Initialize output variables
-    $allFoundErrors = @()
     $foundWorkflows = @()
 
     # Authenticate GitHub CLI
@@ -181,7 +180,6 @@ function Check-GitHubWorkflow {
                 } catch {
                     Write-Output "Failed to download or extract the log file."
                     Write-Output $_.Exception.Message
-                    $allFoundErrors += "Failed to download or process log file for workflow: '$workflowRunName'"
                     $workflowRunMessage = "Failed to download or extract the log file."
                 }
 
@@ -221,16 +219,9 @@ function Check-GitHubWorkflow {
         $workflowRunConclusion = $foundWorkflows[0].WorkflowRunConclusion
         $workflowRunURL        = $foundWorkflows[0].WorkflowRunURL
         $workflowRunMessage    = $foundWorkflows[0].WorkflowRunMessage
-        $allFoundErrorsText    = $allFoundErrors -join "`n"
 
         # Base64 encode the WorkflowRunMessage
         $encodedWorkflowRunMessage = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($workflowRunMessage))
-
-        # Base64 encode allFoundErrors if needed
-        if ($allFoundErrors) {
-            $encodedAllFoundErrors = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($allFoundErrorsText))
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$encodedAllFoundErrors"
-        }
 
         # Set outputs
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunName=$workflowRunName"
@@ -254,13 +245,7 @@ function Check-GitHubWorkflow {
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunURL=$workflowRunURL"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$encodedWorkflowRunMessage"
 
-        # Only add allFoundErrors to GITHUB_ENV if it's set
-        if ($encodedAllFoundErrors) {
-            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$encodedAllFoundErrors"
-        }
-
         # Debug: Print the output values
-        Write-Output "Set allFoundErrors: $allFoundErrorsText"
         Write-Output "Set workflowRunName: $workflowRunName"
         Write-Output "Set workflowRunId: $workflowRunId"
         Write-Output "Set workflowRunAttempts: $workflowRunAttempts"
