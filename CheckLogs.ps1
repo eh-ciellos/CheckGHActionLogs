@@ -253,7 +253,11 @@ function Check-GitHubWorkflow {
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunURL=$workflowRunURL"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$encodedWorkflowRunMessage"
-        Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$encodedAllFoundErrors"
+
+        # Only add allFoundErrors to GITHUB_ENV if it's set
+        if ($encodedAllFoundErrors) {
+            Add-Content -Path $env:GITHUB_ENV -Value "allFoundErrors=$encodedAllFoundErrors"
+        }
 
         # Debug: Print the output values
         Write-Output "Set allFoundErrors: $allFoundErrorsText"
