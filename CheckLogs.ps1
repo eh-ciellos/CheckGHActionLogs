@@ -78,11 +78,11 @@ function Check-GitHubWorkflow {
 
     # Loop over each workflow name
     foreach ($workflowName in $WORKFLOWS) {
-        # Trim the workflow name to remove leading/trailing spaces
-        $workflowNameTrimmed = $workflowName.Trim()
+        # Use the workflow name as is, without trimming
+        $workflowNameExact = $workflowName
 
         # Filter runs for the specific workflow
-        $filteredWorkflows = @($workflowRuns | Where-Object { $_.displayTitle -eq $workflowNameTrimmed })
+        $filteredWorkflows = @($workflowRuns | Where-Object { $_.displayTitle -eq $workflowNameExact })
 
         # Check if any filtered workflow runs are found
         if ($filteredWorkflows) {
@@ -205,7 +205,7 @@ function Check-GitHubWorkflow {
                 # Proceed to the next workflow if needed
             }
         } else {
-            Write-Host "No workflow runs found for the specified workflow '$workflowNameTrimmed' in repository '$REPO'."
+            Write-Host "No workflow runs found for the specified workflow '$workflowNameExact' in repository '$REPO'."
         }
     }
 
@@ -242,8 +242,8 @@ function Check-GitHubWorkflow {
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunConclusion=$workflowRunConclusion"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunURL=$workflowRunURL"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage=$encodedWorkflowRunMessage"
-        Add-Content -Path $env:GITHUB_OUTPUT -Value "allFoundErrors=$encodedAllFoundErrors"
 
+        # Set env
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAttempts=$workflowRunAttempts"
