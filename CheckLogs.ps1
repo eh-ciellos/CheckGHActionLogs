@@ -3,6 +3,8 @@ Param(
     [string] $GH_TOKEN,
     [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $false)]
     [string] $REPO = $env:GITHUB_REPOSITORY
+    [Parameter(HelpMessage = "The GitHub repo name", Mandatory = $false)]
+    [string] $REPO = $env:GITHUB_REPOSITORY
 )
 
 function Check-GitHubWorkflow {
@@ -113,4 +115,5 @@ function Check-GitHubWorkflow {
 }
 
 # Call the function
+Check-GitHubWorkflow -GH_TOKEN $GH_TOKEN -REPO $REPO
 Check-GitHubWorkflow -GH_TOKEN $GH_TOKEN -REPO $REPO
