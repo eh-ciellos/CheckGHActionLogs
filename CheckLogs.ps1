@@ -24,7 +24,7 @@ function Check-GitHubWorkflow {
     }
 
     # Fetch workflow runs
-    $workflowRunsJson = gh run list --repo $REPO --limit 10 --json attempt,conclusion,displayTitle,url
+    $workflowRunsJson = gh run list --repo $REPO --limit 10 --json attempt,startedAt,name,number,displayTitle,createdAt,headBranch,event,url,databaseId,workflowDatabaseId,workflowName,status,conclusion
     $workflowRuns = @($workflowRunsJson | ConvertFrom-Json)
 
     if (-not $workflowRuns) {
