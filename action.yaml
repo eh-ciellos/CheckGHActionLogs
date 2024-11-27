@@ -38,6 +38,16 @@ outputs:
   workflowRunMessage:
     description: 'Message summarizing the workflow run and its errors'
     value: ${{ steps.check_logs.outputs.workflowRunMessage }}
+  workflowRunActor:
+    description: 'Actor who initiated the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunActor }}
+  workflowRunHeadSHA:
+    description: 'Head SHA of the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunHeadSHA }}
+  workflowRunPullRequests:
+    description: 'Pull requests associated with the workflow run'
+    value: ${{ steps.check_logs.outputs.workflowRunPullRequests }}
+
 runs:
   using: 'composite'
   steps:

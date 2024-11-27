@@ -60,11 +60,14 @@ function Check-GitHubWorkflow {
     # Remove duplicates and empty entries
     $WORKFLOWS = $WORKFLOWS | Where-Object { $_ -and $_ -ne '' } | Select-Object -Unique
 
-    # Fetch the workflow runs using GitHub CLI
-    $workflowRunsJson = gh run list --repo $REPO --limit 10 --json attempt,conclusion,startedAt,name,number,displayTitle,createdAt,headBranch,event,url,databaseId,workflowDatabaseId,workflowName,status
+    # Fetch the workflow runs using GitHub API via gh cli
+    $workflowRunsJson = gh api -H "Accept: application/vnd.github+json" "/repos/$REPO/actions/runs?per_page=10"
 
     # Convert JSON output to PowerShell object
-    $workflowRuns = $workflowRunsJson | ConvertFrom-Json
+    $workflowRunsData = $workflowRunsJson | ConvertFrom-Json
+
+    # Extract the array of workflow runs
+    $workflowRuns = $workflowRunsData.workflow_runs
 
     # Ensure $workflowRuns is always an array
     $workflowRuns = @($workflowRuns)
@@ -77,11 +80,11 @@ function Check-GitHubWorkflow {
 
     # Loop over each workflow name
     foreach ($workflowName in $WORKFLOWS) {
-        # Use the workflow name as is, without trimming
+        # Use the workflow name as is
         $workflowNameExact = $workflowName
 
         # Filter runs for the specific workflow
-        $filteredWorkflows = @($workflowRuns | Where-Object { $_.displayTitle -eq $workflowNameExact })
+        $filteredWorkflows = @($workflowRuns | Where-Object { $_.name -eq $workflowNameExact })
 
         # Check if any filtered workflow runs are found
         if ($filteredWorkflows) {
@@ -92,19 +95,22 @@ function Check-GitHubWorkflow {
             $workflowRunMessage = ""
 
             # Extract workflow details
-            $workflowRunName = $run.displayTitle
-            $workflowRunId = $run.databaseId
-            $workflowRunAttempts = $run.attempt
-            $workflowRunStartTime = $run.startedAt
-            $workflowRunOnBranch = $run.headBranch
+            $workflowRunName = $run.name
+            $workflowRunId = $run.id
+            $workflowRunAttempts = $run.run_attempt
+            $workflowRunStartTime = $run.run_started_at
+            $workflowRunOnBranch = $run.head_branch
             $workflowRunAtEvent = $run.event
             $workflowRunConclusion = $run.conclusion
-            $workflowRunURL = $run.url
+            $workflowRunURL = $run.html_url
+            $workflowRunActor = $run.actor.login
+            $workflowRunHeadSHA = $run.head_sha
+            $workflowRunPullRequests = $run.pull_requests
 
             # Handle workflows with specific conclusions
             if ($workflowRunConclusion -in @("neutral", "cancelled", "skipped", "timed_out", "action_required")) {
                 # Prepare a message
-                $workflowRunMessage = "The workflow '$workflowRunName' started at $workflowRunStartTime on branch '$workflowRunOnBranch' for the event '$workflowRunAtEvent' has been attempted $workflowRunAttempts times and has finished with status: $workflowRunConclusion."
+                $workflowRunMessage = "The workflow '$workflowRunName' initiated by '$workflowRunActor' started at $workflowRunStartTime on branch '$workflowRunOnBranch' and commit '$workflowRunHeadSHA' for the event '$workflowRunAtEvent' has been attempted $workflowRunAttempts times and has finished with status: $workflowRunConclusion."
                 Write-Host $workflowRunMessage
                 Write-Host "To find out more information, please check: $workflowRunURL"
 
@@ -118,6 +124,9 @@ function Check-GitHubWorkflow {
                     WorkflowRunAtEvent    = $workflowRunAtEvent
                     WorkflowRunConclusion = $workflowRunConclusion
                     WorkflowRunURL        = $workflowRunURL
+                    WorkflowRunActor      = $workflowRunActor
+                    WorkflowRunHeadSHA    = $workflowRunHeadSHA
+                    WorkflowRunPullRequests = $workflowRunPullRequests
                     WorkflowRunMessage    = $workflowRunMessage
                 }
 
@@ -193,6 +202,9 @@ function Check-GitHubWorkflow {
                     WorkflowRunAtEvent    = $workflowRunAtEvent
                     WorkflowRunConclusion = $workflowRunConclusion
                     WorkflowRunURL        = $workflowRunURL
+                    WorkflowRunActor      = $workflowRunActor
+                    WorkflowRunHeadSHA    = $workflowRunHeadSHA
+                    WorkflowRunPullRequests = $workflowRunPullRequests
                     WorkflowRunMessage    = $workflowRunMessage
                 }
 
@@ -218,7 +230,13 @@ function Check-GitHubWorkflow {
         $workflowRunAtEvent    = $foundWorkflows[0].WorkflowRunAtEvent
         $workflowRunConclusion = $foundWorkflows[0].WorkflowRunConclusion
         $workflowRunURL        = $foundWorkflows[0].WorkflowRunURL
+        $workflowRunActor      = $foundWorkflows[0].WorkflowRunActor
+        $workflowRunHeadSHA    = $foundWorkflows[0].WorkflowRunHeadSHA
+        $workflowRunPullRequests = $foundWorkflows[0].WorkflowRunPullRequests
         $workflowRunMessage    = $foundWorkflows[0].WorkflowRunMessage
+
+        # Serialize pull requests to JSON string
+        $workflowRunPullRequestsJson = $workflowRunPullRequests | ConvertTo-Json -Compress
 
         # Base64 encode the WorkflowRunMessage
         $encodedWorkflowRunMessage = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($workflowRunMessage))
@@ -232,8 +250,10 @@ function Check-GitHubWorkflow {
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunAtEvent=$workflowRunAtEvent"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunConclusion=$workflowRunConclusion"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunURL=$workflowRunURL"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunActor=$workflowRunActor"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunHeadSHA=$workflowRunHeadSHA"
+        Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunPullRequests=$workflowRunPullRequestsJson"
         Add-Content -Path $env:GITHUB_OUTPUT -Value "workflowRunMessage=$encodedWorkflowRunMessage"
-
         # Set env
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunName=$workflowRunName"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunId=$workflowRunId"
@@ -243,6 +263,9 @@ function Check-GitHubWorkflow {
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunAtEvent=$workflowRunAtEvent"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunConclusion=$workflowRunConclusion"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunURL=$workflowRunURL"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunActor=$workflowRunActor"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunHeadSHA=$workflowRunHeadSHA"
+        Add-Content -Path $env:GITHUB_ENV -Value "workflowRunPullRequests=$workflowRunPullRequestsJson"
         Add-Content -Path $env:GITHUB_ENV -Value "workflowRunMessage=$encodedWorkflowRunMessage"
 
         # Debug: Print the output values
@@ -254,6 +277,9 @@ function Check-GitHubWorkflow {
         Write-Output "Set workflowRunAtEvent: $workflowRunAtEvent"
         Write-Output "Set workflowRunConclusion: $workflowRunConclusion"
         Write-Output "Set workflowRunURL: $workflowRunURL"
+        Write-Output "Set workflowRunActor: $workflowRunActor"
+        Write-Output "Set workflowRunHeadSHA: $workflowRunHeadSHA"
+        Write-Output "Set workflowRunPullRequests: $workflowRunPullRequestsJson"
         Write-Output "Set workflowRunMessage: $workflowRunMessage"
     } else {
         Write-Host "No workflows with the specified conclusions found."
